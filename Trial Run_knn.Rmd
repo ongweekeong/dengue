@@ -1,0 +1,71 @@
+---
+title: "Trial run_knn"
+output: html_notebook
+---
+
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("class")
+library(ggplot2)
+library(dplyr)
+library(class)
+
+```{r}
+dengue_labels_train <- read.csv("C:/Users/junqi/OneDrive - National University of Singapore/Desktop/4308 PROJECT DATASETS/dengue_labels_train.csv")
+str(dengue_labels_train) #check class
+```
+
+```{r}
+dengue_labels_train$total_cases <- as.numeric(dengue_labels_train$total_cases)
+str(dengue_labels_train) #check total_cases class is numeric
+```
+```{r}
+dengue_labels_train$total_cases <- cut(dengue_labels_train$total_cases, breaks = c(0, 50, 100, Inf), labels = c("Low Risk", "Medium Risk", "High risk"), right = FALSE)
+#categorize total_cases into risk level
+## [0,50) is low risk, [50,100) is medium risk, [100, Inf] is high risk
+head(dengue_labels_train)
+```
+```{r}
+dengue_features_train_cleaned<- read.csv("C:/Users/junqi/OneDrive - National University of Singapore/Desktop/4308 PROJECT DATASETS/dengue_features_train (trial cleaned).csv")
+summary(dengue_features_train_cleaned) #selected 4 features
+```
+```{r}
+normalize <- function(x){
+  return((x - min(x)) / (max(x) - min(x)))
+}
+trg_new <- as.data.frame(lapply(dengue_features_train_cleaned[,c(2,3,4,5)], normalize))
+summary(trg_new) #see normalized values
+```
+```{r}
+#find row number of sj and iq
+#sj row 1:936
+#iq row 937:1456
+#separate into countries and further into trg and test data set . 10% used for test
+trg_new_train_sj <- trg_new[1:842, ]
+trg_new_test_sj <- trg_new[843:936, ]                                                             
+trg_new_train_sj_target <- dengue_labels_train[1:842, 4]
+trg_new_test_sj_target <- dengue_labels_train[843:936, 4]
+```
+
+```{r}
+#find k
+i=1
+k.optm = 1
+for (i in 1:40){
+  knn.mod <- knn(train=trg_new_train_sj, test=trg_new_test_sj, cl=trg_new_train_sj_target, k=i)
+  k.optm[i] <- 100*sum(trg_new_test_sj_target == knn.mod)/NROW(trg_new_test_sj_target)
+  k=i
+  cat(k,"=",k.optm[i],"\n")
+}
+```
+```{r}
+plot(k.optm, type="b", xlab="K-Value", ylab="Accuracy level")
+#k=7
+```
+```{r}
+#build knn model
+model1 <- knn(train=trg_new_train_sj, test=trg_new_test_sj, cl=trg_new_train_sj_target, k=7)
+```
+```{r}
+table(trg_new_test_sj_target, model1) #confusion matrix with predictions to check 
+```
